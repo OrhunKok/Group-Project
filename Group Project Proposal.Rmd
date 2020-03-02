@@ -1,0 +1,23 @@
+---
+title: "Group Project Proposal"
+author: "Sasha Main, Ferris Nowlan, Orhun Kok, and Navneetha Hardivar"
+date: "02/03/2020"
+output: html_document
+---
+## Aircraft Wildlife Strikes Analysis
+ 
+Our main dataset consists of 174104 instances of bird-aircraft collisions that occurred in the USA between 1990 and 2015, with 66 features describing each incident. The key features include date, aircraft type, airport location, height of collision, bird species, and estimated number of birds involved. The FAA and the military are both very invested in understanding patterns in bird strikes because reducing financial and equipment damage from birds is a priority.
+
+First, we will investigate what type of bird is most commonly involved in airplane collisions. We will directly count the number of incidents involving each species, and then we will divide the dataset into 5 year chunks and investigate whether the most commonly impacted species have changed through time. We will use ggplot to visualise our results. Next, we will create a phylogeny of the 717 bird species found in the dataset to investigate whether a particular clade is more likely to be involved in strikes. To create this phylogeny, we will use BLAST to pull down mitochondrial DNA from NCBI, align it using the muscle package in R, calculate distance matrix using ape, and create a phylogeny using ggtree. 
+
+Second, we will investigate if a higher number of birds are hit during their migration period through comparing the relationship between the months of migration (March to April, August to November), the quantity of birds, and the species of birds hit in each strike. We hypothesize that bird species are more likely to be hit during their migration season, and that flocks of birds are also more likely to be hit during migration. As more than 350 North American bird species migrate, we also hypothesize that there will be a significant increase in bird strikes in general in the migration months.
+  
+Third, we will look into which region is the worst offender for bird strikes. We will convert the airport names into airport coordinates so that geospatial packages like ggmaps, maps, mapdata, sp, and ggplot will be able to process the data effectively. We will then colour code each state by bird strike quantity that has occurred within their borders, with each airport marked with circle size proportional to strike count. To tie our questions together, we will use a second map where the regions are colour coded by the most common clade of bird to be struck in each area. We will then overlay a map of the four major migration pathways of birds in North America (Atlantic, Mississippi, Central, and Pacific) on top of our bird strike frequency map. Around 40% of all migrating waterfowl use the Mississippi Flyway, so we hypothesize that bird strikes of waterfowl will be significantly higher along this route.
+  
+In conclusion, aircrafts regularly report bird strikes in detail, which can be used to investigate patterns in when, where, and which birds become casualties. 
+
+```{r , include=TRUE}
+data<-read.csv("database.csv", header=TRUE, stringsAsFactors = FALSE)
+head(data)
+```
+
