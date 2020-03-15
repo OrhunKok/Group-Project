@@ -28,6 +28,8 @@ install.packages("lubridate")
 install.packages("ggrepel")
 install.packages("tidyverse")
 install.packages("usmap")
+install.packages("maptools")
+install.packages("rgdal")
 
 # Load libraries - do this every time
 library(lubridate)
@@ -37,6 +39,8 @@ library(data.table)
 library(ggrepel)
 library(tidyverse)
 library(usmap)
+library(maptools)
+library(rgdal)
 
 # First going to make map highlighting the number of bird strikes by state
 length(unique(data$State)) # concerning there are 63 states in here, that's too many
@@ -126,26 +130,102 @@ for(i in 1:length(datas$Airport.ID)){
   }
 }
 
-length(unique(latmis1)) #
+length(unique(latmis1)) #only missing 37 out of the 1914 airports in the US
 length(unique(longmis1))
 
+# Filter out missing airports
+head(datas)
+dim(datas)
+misports<-c(unique(latmis1))
+'%!in%' <- function(x,y)!('%in%'(x,y))
+ndatas<-subset(datas,datas$Airport.ID %!in% misports)
+dim(ndatas)
 
+# Find the count of strikes in each state for the new filtered airport dataset
+ncounts<-rep(NA,51)
+for(i in 1:51){
+  ncounts[i]<-sum(ndatas$State==states[i])
+}
 
+# Make a new dataset of the states and strikes
+nstatestrike<-data.frame(state=states, Strikes=ncounts)
+head(nstatestrike)
 
+# Make a new dataset of the airports and strikes
+length(unique(ndatas$Airport.ID))
+usairports<-unique(ndatas$Airport.ID)
+portstrikescounts<-rep(NA,length(unique(ndatas$Airport.ID)))
+for(i in 1:length(unique(ndatas$Airport.ID))){
+  portstrikescounts[i]<-sum(ndatas$Airport.ID==usairports[i])
+}
 
+airportstrikes<-data.frame(Airport=usairports, Strikes=portstrikescounts)
+head(airportstrikes)
 
+# Run loop with new airports and strikes dataset
+nlongcor<-rep(NA,length(airportstrikes$Airport))
+nlatcor<-rep(NA,length(airportstrikes$Airport))
+nlatmis<-c()
+nlongmis<-c()
+for(i in 1:length(airportstrikes$Airport)){
+  if(length(usair[grep(airportstrikes$Airport[i],usair$ident),]$longitude_deg)==0){
+    nlongmis<-append(nlongmis,airportstrikes$Airport[i])
+    nlongcor[i]<-NA
+  }else{
+    nlongcor[i]<-usair[grep(airportstrikes$Airport[i],usair$ident),]$longitude_deg
+  }
+  if(length(usair[grep(airportstrikes$Airport[i],usair$ident),]$latitude_deg)==0){
+    nlatcor[i]<-NA
+    nlatmis<-append(nlatmis,airportstrikes$Airport[i])
+  }else{
+    nlatcor[i]<-usair[grep(airportstrikes$Airport[i],usair$ident),]$latitude_deg
+  }
+}
 
+length(unique(nlatmis)) #these are zero as they should be
+length(unique(nlongmis))
 
+# Add the coordinates to the new airport and strikes dataset
+airportstrikes$Longitude<-nlongcor
+airportstrikes$Latitude<-nlatcor
+head(airportstrikes)
+airportstrikes$Longitude<-as.numeric(airportstrikes$Longitude)
+airportstrikes$Latitude<-as.numeric(airportstrikes$Latitude)
+airportstrikes$Strikes<-as.numeric(airportstrikes$Strikes)
+str(airportstrikes)
 
-airportdata[grep(data$Airport.ID[1],airportdata$`ICAO Code`),]$Latitude
-airportdata[grep("KJWN", airportdata$`ICAO Code`),]
+# Makea map using both datasets
+p2<-plot_usmap(data = nstatestrike, values = "Strikes", color = "grey") + 
+  scale_fill_continuous(low= "white", high= "cadetblue",name = "Number of Bird Strikes per State", label = scales::comma) + 
+  theme(legend.position = "right")
+p2
 
-eq_transformed <- usmap_transform(earthquakes)
+test_data <- data.frame(lon = as.numeric(nlongcor), lat = as.numeric(nlatcor), strike=portstrikescounts)
 
-plot_usmap() +
-  geom_point(data = eq_transformed, aes(x = lon.1, y = lat.1, size = mag),
-             color = "red", alpha = 0.25) +
-  labs(title = "US Earthquakes",
-       subtitle = "Source: USGS, Jan 1 to Jun 30 2019",
-       size = "Magnitude") +
+transformed_data <- usmap_transform(test_data)
+
+dim(test_data)
+dim(transformed_data)
+head(test_data)
+head(transformed_data) #strange that I loose two rows when I transform the data
+tail(test_data)
+tail(transformed_data) #missing the last five rows from test_data?
+
+plot_usmap("states") + 
+  geom_point(data = transformed_data, 
+             aes(x = lon.1, y = lat.1, size = strike), 
+             color = "red",
+             alpha = 0.25)+
+  labs(title = "US Bird Strikes per Airport",
+       size = "Number of Strikes") +
+  theme(legend.position = "right")
+
+#Overlay the second map 
+p2 + 
+  geom_point(data = transformed_data, 
+             aes(x = lon.1, y = lat.1, size = strike), 
+             color = "orange",
+             alpha = 0.25)+
+  labs(title = "US Bird Strikes per Airport",
+       size = "Number of Strikes per Airport") +
   theme(legend.position = "right")
