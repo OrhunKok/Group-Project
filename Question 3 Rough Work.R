@@ -30,6 +30,7 @@ install.packages("tidyverse")
 install.packages("usmap")
 install.packages("maptools")
 install.packages("rgdal")
+install.packages("maps")
 
 # Load libraries - do this every time
 library(lubridate)
@@ -41,6 +42,7 @@ library(tidyverse)
 library(usmap)
 library(maptools)
 library(rgdal)
+library(maps)
 
 # First going to make map highlighting the number of bird strikes by state
 length(unique(data$State)) # concerning there are 63 states in here, that's too many
@@ -221,7 +223,7 @@ plot_usmap("states") +
   theme(legend.position = "right")
 
 #Overlay the second map 
-p2 + 
+p3<-p2 + 
   geom_point(data = transformed_data, 
              aes(x = lon.1, y = lat.1, size = strike), 
              color = "orange",
@@ -229,3 +231,107 @@ p2 +
   labs(title = "US Bird Strikes per Airport",
        size = "Number of Strikes per Airport") +
   theme(legend.position = "right")
+p3
+
+# Make a world map
+map('world', fill = TRUE, col = "grey")
+
+prelim_plot <- ggplot(airportdata, aes(x = Longitude, y = Latitude)) +
+    geom_point()
+prelim_plot                
+
+install.packages("rworldmap")
+library(rworldmap)
+world <- getMap(resolution = "low")
+
+with_world <- ggplot() +
+    geom_polygon(data = world, 
+                 aes(x = long, y = lat, group = group),
+                 fill = NA, colour = "black") + 
+    geom_point(data = airportdata, 
+               aes(x = Longitude, y = Latitude, colour="orange")) +
+    coord_quickmap() +  
+    theme_classic() +  
+    xlab("Longitude") +
+    ylab("Latitude") 
+with_world
+
+# Make a new dataset of global airports and strikes
+head(data)
+head(airportdata)
+length(unique(data$Airport.ID))
+globalairports<-unique(data$Airport.ID)
+gloportstrikescounts<-rep(NA,length(unique(data$Airport.ID)))
+for(i in 1:length(unique(data$Airport.ID))){
+  gloportstrikescounts[i]<-sum(data$Airport.ID==globalairports[i])
+}
+
+globalairportstrikes<-data.frame(Airport=globalairports, Strikes=gloportstrikescounts)
+head(globalairportstrikes)
+
+# Subset global airport and strikes dataset by the airports included in the airportdata
+nglobalairportstrikes<-subset(globalairportstrikes, globalairportstrikes$Airport %in% airportdata$`ICAO Code`)
+dim(globalairportstrikes)
+dim(nglobalairportstrikes) #639 global airports
+
+longcoor<-rep(NA,length(nglobalairportstrikes$Airport))
+latcoor<-rep(NA,length(nglobalairportstrikes$Airport))
+latmiss<-c()
+longmiss<-c()
+for(i in 1:length(nglobalairportstrikes$Airport)){
+  if(length(airportdata[grep(nglobalairportstrikes$Airport[i],airportdata$`ICAO Code`),]$Longitude)==0){
+    longmiss<-append(longmiss,nglobalairportstrikes$Airport[i])
+    longcoor[i]<-NA
+  }else{
+    longcoor[i]<-airportdata[grep(nglobalairportstrikes$Airport[i],airportdata$`ICAO Code`),]$Longitude
+  }
+  if(length(airportdata[grep(nglobalairportstrikes$Airport[i],airportdata$`ICAO Code`),]$Latitude)==0){
+    latcoor[i]<-NA
+    latmiss<-append(latmiss,nglobalairportstrikes$Airport[i])
+  }else{
+    latcoor[i]<-airportdata[grep(nglobalairportstrikes$Airport[i],airportdata$`ICAO Code`),]$Latitude
+  }
+}
+
+length(unique(latmiss)) #zero as it should be
+length(unique(data$Airport.ID)) #2228
+
+# Add the coordinates to the new airport and strikes dataset
+nglobalairportstrikes$Longitude<-as.numeric(longcoor)
+nglobalairportstrikes$Latitude<-as.numeric(latcoor)
+head(nglobalairportstrikes)
+nglobalairportstrikes$Strikes<-as.numeric(nglobalairportstrikes$Strikes)
+str(nglobalairportstrikes)
+
+# Plot
+map1 <- ggplot() +
+  geom_polygon(data = world, 
+               aes(x = long, y = lat, group = group),
+               fill = "cadetblue", colour = "grey") + 
+  geom_point(data = nglobalairportstrikes, 
+             aes(x = Longitude, y = Latitude, size= Strikes),colour="orange",alpha = 0.25) +
+  labs(title = "Global Bird Strikes per Airport",
+       size = "Number of Strikes per Airport")+
+  coord_quickmap() +  
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.background=element_blank())
+map1
+
+# Hm there may be slight inconsistencies between the two since from different dataset/packages
+# Maybe should look into also taking the US entries from the global dataset?
+
+# Which airports have more than 5000 strikes
+mfive<-subset(nglobalairportstrikes, nglobalairportstrikes$Strikes >= 5000)
+dim(mfive)
+head(mfive) # only the one in denver- this may be the highest altitude- interesting
+us<-subset(airportdata,airportdata$Country=="USA")
+dim(us)
+head(us)
+max(us$Altitude)
+us[us$Altitude=="2038",]
+us[us$`ICAO Code`=="KDEN",]
+
