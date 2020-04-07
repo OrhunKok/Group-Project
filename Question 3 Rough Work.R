@@ -24,13 +24,16 @@ colnames(airportdata)<-columnnames
 head(airportdata)
 
 # Install libraries - do this one time
-install.packages("lubridate")
-install.packages("ggrepel")
-install.packages("tidyverse")
-install.packages("usmap")
-install.packages("maptools")
-install.packages("rgdal")
-install.packages("maps")
+#install.packages("lubridate")
+#install.packages("ggrepel")
+#install.packages("tidyverse")
+#install.packages("usmap")
+#install.packages("maptools")
+#install.packages("rgdal")
+#install.packages("maps")
+#install.packages("rworldmap")
+#install.packages("magick")
+#install.packages("rlang")
 
 # Load libraries - do this every time
 library(lubridate)
@@ -43,6 +46,8 @@ library(usmap)
 library(maptools)
 library(rgdal)
 library(maps)
+library(rworldmap)
+library(magick)
 
 # First going to make map highlighting the number of bird strikes by state
 length(unique(data$State)) # concerning there are 63 states in here, that's too many
@@ -65,12 +70,43 @@ for(i in 1:51){
 # Make a new dataset
 statestrike<-data.frame(state=states, Strikes=counts)
 head(statestrike)
+summary(statestrike)
+statestrike[statestrike$Strike==max(statestrike$Strikes),] 
+# TX has the most strikes with 14854- but Texas is also a huge state (second largest after Alaska) so it may just have a lot of airports
+statestrike[statestrike$Strike==min(statestrike$Strikes),] 
+# DE has the least strikes with 166- but DE is also the second smallest state after Rhode Island- so it may not have very many airports
 
 p<-plot_usmap(data = statestrike, values = "Strikes", color = "white") + 
   scale_fill_continuous(name = "Number of Bird Strikes", label = scales::comma) + 
   theme(legend.position = "right")
 p
-# Could come back to this later and scale the bird strikes by size
+
+# Scale the bird strikes by number of airports in each state
+# Some states have more airports than others, so may not be a fair comparison
+head(datas)
+length(datas$State)
+test2<-c()
+airportnum<-c() #will be number of airports in each state
+for(i in 1:length(states)){
+  test2<-datas[datas$State==states[i],c(6,7)]
+  airportnum<-append(airportnum,length(unique(test2$Airport)))
+}
+statestrikean<-data.frame(state=states, Strikes=round(counts/airportnum))
+head(statestrikean)
+summary(statestrikean)
+statestrikean[statestrikean$Strike==max(statestrikean$Strikes),] # DC has the most strikes with 1475
+statestrikean[statestrikean$Strike==min(statestrikean$Strikes),] # WY has the least strikes with 11
+
+p1<-plot_usmap(data = statestrikean, values = "Strikes", color = "grey") + 
+  scale_fill_continuous(low= "white", high= "cadetblue",name = "Number of Bird Strikes per Airport in each State", label = scales::comma) + 
+  theme(legend.position = "right")
+p1
+# The whole map is very light because DC is so much higher than everything else, yet very small
+# Need to show DC better
+pp1<-plot_usmap(data = statestrikean, values = "Strikes", color = "grey", include=c("DC","VA","MD","WD")) + 
+  scale_fill_continuous(low= "white", high= "cadetblue",name = "Number of Bird Strikes per Airport in each State", label = scales::comma) + 
+  theme(legend.position = "right")
+pp1
 
 # Add the longitude and latitude to each observation based off the airport
 head(data)
@@ -240,8 +276,6 @@ prelim_plot <- ggplot(airportdata, aes(x = Longitude, y = Latitude)) +
     geom_point()
 prelim_plot                
 
-install.packages("rworldmap")
-library(rworldmap)
 world <- getMap(resolution = "low")
 
 with_world <- ggplot() +
@@ -268,11 +302,22 @@ for(i in 1:length(unique(data$Airport.ID))){
 
 globalairportstrikes<-data.frame(Airport=globalairports, Strikes=gloportstrikescounts)
 head(globalairportstrikes)
+dim(globalairportstrikes)
+summary(globalairportstrikes)
+globalairportstrikes[globalairportstrikes$Strike==max(globalairportstrikes$Strikes),] 
+# Airport ZZZZ has the most strikes with 18570 which makes sense since according to wikipedia
+# "ZZZZ is a special code which is used when no ICAO code exists for the airport. It is often used by helicopters not operating at an aerodrome."
+globalairportstrikes[globalairportstrikes$Strike==min(globalairportstrikes$Strikes),] # There's 2147 airports all with only 1 recorded strike
 
 # Subset global airport and strikes dataset by the airports included in the airportdata
 nglobalairportstrikes<-subset(globalairportstrikes, globalairportstrikes$Airport %in% airportdata$`ICAO Code`)
 dim(globalairportstrikes)
-dim(nglobalairportstrikes) #639 global airports
+dim(nglobalairportstrikes) #639 global airports (missing a lot of those US airports probably)
+summary(nglobalairportstrikes)
+nglobalairportstrikes[nglobalairportstrikes$Strike==max(nglobalairportstrikes$Strikes),] 
+# KDEN airport has the most strikes with 5434
+nglobalairportstrikes[nglobalairportstrikes$Strike==min(nglobalairportstrikes$Strikes),]
+# 2223 airports all have only 1 recorded strike
 
 longcoor<-rep(NA,length(nglobalairportstrikes$Airport))
 latcoor<-rep(NA,length(nglobalairportstrikes$Airport))
@@ -321,17 +366,94 @@ map1 <- ggplot() +
         panel.grid.minor=element_blank(),plot.background=element_blank())
 map1
 
-# Hm there may be slight inconsistencies between the two since from different dataset/packages
-# Maybe should look into also taking the US entries from the global dataset?
+# I should combine the two data sets- the global and US airports so that overall more of the data is included in the worldwide map
+head(nglobalairportstrikes)
+dim(nglobalairportstrikes)
+head(airportstrikes)
+dim(airportstrikes)
+allairportstrikes<-rbind(nglobalairportstrikes,airportstrikes)
+dim(allairportstrikes)
+length(unique(allairportstrikes$Airport))
+# Need to remove all duplicate airports
+abcairports<-allairportstrikes[order(allairportstrikes$Airport),] #let's us easily see the duplicates
+uniqueallairports<-allairportstrikes[!duplicated(allairportstrikes$Airport),]
+uniqueallairportss<-uniqueallairports[order(uniqueallairports$Airport),] #let's us easily check no more duplicates
 
-# Which airports have more than 5000 strikes
-mfive<-subset(nglobalairportstrikes, nglobalairportstrikes$Strikes >= 5000)
-dim(mfive)
-head(mfive) # only the one in denver- this may be the highest altitude- interesting
-us<-subset(airportdata,airportdata$Country=="USA")
-dim(us)
-head(us)
-max(us$Altitude)
-us[us$Altitude=="2038",]
-us[us$`ICAO Code`=="KDEN",]
+# Now can remake the world map with way more points
+map2 <- ggplot() +
+  geom_polygon(data = world, 
+               aes(x = long, y = lat, group = group),
+               fill = "darkslategray3", colour = "white") + 
+  geom_point(data = uniqueallairports, 
+             aes(x = Longitude, y = Latitude, size= Strikes),colour="tomato",alpha = 0.25) +
+  labs(title = "Global Bird Strikes per Airport",
+       size = "Number of Strikes per Airport")+
+  coord_quickmap() +  
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.background=element_blank())
+map2
 
+# Now need to figure out how to overlay maps/ how to make a map of the migration pathways
+# See if we can save the world map as transparent- could take the points and overlay them on the migration image
+map3 <- ggplot() +
+  geom_polygon(data = world, 
+               aes(x = long, y = lat, group = group),
+               fill = "darkslategray3", colour = "white") + 
+  geom_point(data = uniqueallairports, 
+             aes(x = Longitude, y = Latitude, size= Strikes),colour="tomato",alpha = 0.25) +
+  labs(title = "Global Bird Strikes per Airport",
+       size = "Number of Strikes per Airport")+
+  coord_quickmap() +  
+  theme(
+    axis.line=element_blank(),axis.text.x=element_blank(),
+    axis.text.y=element_blank(),axis.ticks=element_blank(),
+    axis.title.x=element_blank(),
+    axis.title.y=element_blank(),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA),
+    panel.border=element_blank()
+  )
+map3
+ggsave("test.png", map3, bg = "transparent") 
+# Awesome! That saved it transparent!
+
+# Probably only want to save the points and border though- no fill
+map4 <- ggplot() +
+  geom_polygon(data = world, 
+               aes(x = long, y = lat, group = group),
+               fill = NA, colour = "grey") + 
+  geom_point(data = uniqueallairports, 
+             aes(x = Longitude, y = Latitude, size= Strikes),colour="tomato",alpha = 0.25) +
+  labs(title = "Global Bird Strikes per Airport",
+       size = "Number of Strikes per Airport")+
+  coord_quickmap() +  
+  theme(
+    axis.line=element_blank(),axis.text.x=element_blank(),
+    axis.text.y=element_blank(),axis.ticks=element_blank(),
+    axis.title.x=element_blank(),
+    axis.title.y=element_blank(),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "transparent",colour = NA),
+    plot.background = element_rect(fill = "transparent",colour = NA),
+    panel.border=element_blank()
+  )
+map4
+ggsave("maptest.png", map4, bg = "transparent",width = 90,height =70,units = "cm") # needs to be pretty big so its not too crowded
+
+# Now it makes the most sense only look at North America and South America on the world map
+# I think it may be easiest to just crop and blow up the original world map, rather than remake the map with only north and latin america
+
+testmap <- image_read('maptest.png')
+print(testmap)
+
+testmap1<-image_crop(testmap, "4500x6000")
+image_browse(testmap1)
+
+# I downloaded a lot of bird migration diagrams- but finding a good one to overlay may be difficult
