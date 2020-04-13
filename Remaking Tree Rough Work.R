@@ -138,10 +138,33 @@ SpeciesSearch # Looks good
 length(SpeciesSearch)
 
 # Now write loop
+# Need to incorportate aspect for species with no hits- for example "SPARROW"
 idList<-c()
+SpeciesFoundList<-c()
+SpeciesNotFoundList<-c()
 for(i in 1:length(SpeciesSearch)){
   searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[i])
-  idList<-append(idList, searchtest[1])
+  if(length(searchtest$ids)==0){
+    SpeciesNotFoundList<-append(SpeciesNotFoundList, SpeciesSearch[i])
+  }else{
+    idList<-append(idList, searchtest$ids[1])
+    SpeciesFoundList<-append(SpeciesFoundList, SpeciesSearch[i])
+  }
 }
+length(idList)
+idList 
 
+# Another test- troubleshooting
+head(idList)
+SpeciesSearch[1]
+testdove <-entrez_search(db="nuccore", term=SpeciesSearch[1])
+print(testdove)
+testdove[1]
+idList<-c()
+SpeciesSearch[8]
+searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[8])
+idList<-append(idList, searchtest$ids[1])
+idList
+length(searchtest$ids)==0
 
+head(Species,20)
