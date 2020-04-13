@@ -33,6 +33,7 @@ install.packages("taxize")
 # Load libraries
 library(rentrez)
 library(taxize)
+library(purrr)
 
 # Load data
 data<-read.csv("NEwDataset.csv", header=TRUE, stringsAsFactors = FALSE, row.names = "X")
@@ -178,6 +179,7 @@ SpeciesNotFoundList
 # Made it through 687 of the 710 species
 # So I'm going to move on for now, and come back later- hopefully ferris and orhun can help troubleshoot
 # when I come back maybe try seq_along
+###UPDATE: restarted R and the loop worked no problem
 
 BirdCYTBList<-entrez_fetch(db="nuccore", id=idList, rettype="fasta")
 # Got another error
@@ -212,16 +214,89 @@ searchtesestt <-entrez_search(db="nuccore", term=SpeciesSearch[1])
 tester2<-strsplit(searchtesestt$QueryTranslation[1],"\"")
 tester2[[1]][2] # that isolates the species name- in this case Zenaida macroura
 # so to actually get what I want would be
-paste(tester2[[1]][2],"cytochrome b (cytb) gene, partial cds; mitochondrial")
+see<-paste(tester2[[1]][2],"cytochrome b (cytb) gene, partial cds; mitochondrial")
 # The question is how can I use this to get the specific hit
 str(searchtesestt)
 summs <- entrez_summary(db="nuccore", id=searchtesestt$ids)
-print(owl_summs)
 titles <- extract_from_esummary(summs, "title")
 unname(titles) # here you can see the third one is the one I want
 # but gonna double check
 check<-entrez_fetch(db="nuccore", id=searchtesestt$ids[3], rettype="fasta")
 print(check)
 # Okay cool
+length(unname(titles))
+unname(titles)[unname(titles)==see]
+position<-match(see,unname(titles))
+position
+?detect
 
 # Now need to incorporate this into my loop to double check it's the right sequence- not the full genome
+idList<-c()
+SpeciesFoundList<-c()
+SpeciesNotFoundList<-c()
+CYTBnotFound<-c()
+for(i in 1:2){
+  searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[i])
+  if(length(searchtest$ids)==0){
+    SpeciesNotFoundList<-append(SpeciesNotFoundList, SpeciesSearch[i])
+  }else{
+    speciesname<-strsplit(searchtest$QueryTranslation[1],"\"")[[1]][2]
+    check<-paste(speciesname,"cytochrome b (cytb) gene, partial cds; mitochondrial")
+    summs <- entrez_summary(db="nuccore", id=searchtest$ids)
+    titles <- extract_from_esummary(summs, "title")
+    position<-match(check,unname(titles))
+    idList<-append(idList, searchtest$ids[position])
+    SpeciesFoundList<-append(SpeciesFoundList, SpeciesSearch[i])
+  }
+}
+
+length(idList)
+idList 
+SpeciesFoundList
+SpeciesNotFoundList
+
+head(SpeciesSearch)
+
+# So just in the preliminary test gull is NA
+searchtesestt <-entrez_search(db="nuccore", term=SpeciesSearch[2])
+print(searchtesestt)
+tester2<-strsplit(searchtesestt$QueryTranslation[1],"\"")
+tester2[[1]][2] 
+see<-paste(tester2[[1]][2],"cytochrome b (cytb) gene, partial cds; mitochondrial")
+str(searchtesestt)
+summs <- entrez_summary(db="nuccore", id=searchtesestt$ids)
+titles <- extract_from_esummary(summs, "title")
+unname(titles) # here you can see the third one is the one I want
+# but gonna double check
+check<-entrez_fetch(db="nuccore", id=searchtesestt$ids[3], rettype="fasta")
+print(check)
+# Okay cool
+length(unname(titles))
+unname(titles)[unname(titles)==see]
+position<-match(see,unname(titles))
+position
+
+# Still working on loop
+idList<-c()
+SpeciesFoundList<-c()
+SpeciesNotFoundList<-c()
+CYTBnotFound<-c()
+for(i in 1:2){
+  searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[i])
+  if(length(searchtest$ids)==0){
+    SpeciesNotFoundList<-append(SpeciesNotFoundList, SpeciesSearch[i])
+  }else{
+    speciesname<-strsplit(searchtest$QueryTranslation[1],"\"")[[1]][2]
+    check<-paste(speciesname,"cytochrome b (cytb) gene, partial cds; mitochondrial")
+    summs <- entrez_summary(db="nuccore", id=searchtest$ids)
+    titles <- extract_from_esummary(summs, "title")
+    position<-match(check,unname(titles))
+    if(is.na(position)){
+      CYTBnotFound<-append(CYTBnotFound,SpeciesSearch[i])
+    }else{
+      idList<-append(idList, searchtest$ids[position])
+      SpeciesFoundList<-append(SpeciesFoundList, SpeciesSearch[i])
+    }
+    
+  }
+}
