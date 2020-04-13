@@ -34,6 +34,8 @@ install.packages("taxize")
 library(rentrez)
 library(taxize)
 library(ape)
+library(ggplot2)
+library(reshape2)
 
 # Load data
 data<-read.csv("NEwDataset.csv", header=TRUE, stringsAsFactors = FALSE, row.names = "X")
@@ -341,22 +343,26 @@ write.csv(Sequences,file="Sequences.csv")
 # Now work on aligning the sequences and so on
 BDNA<-sapply(Sequences$Sequence,strsplit,split="")
 head(BDNA)
+str(BDNA)
+View(BDNA)
+names(BDNA)
 head(Sequences$Name)
 names(BDNA)<-paste(1:nrow(Sequences),Sequences$Name, sep = "_") #combine row number with sequence ID as new identifiers
 names(BDNA)
 # didn't really need to do that step but oh well
 
 #now need to convert it to a DNA bin object
-BDNA<-as.DNAbin(BDNA)
-BAlign<- ape::muscle(BDNA, quiet = FALSE)
+BDNA1<-as.DNAbin(BDNA)
+head(BDNA1)
+BAlign<- ape::muscle(BDNA1, quiet = FALSE)
+head(BAlign)
 str(BAlign)
 
 #Checking
 checkAlignment(BAlign, what = 1)
 checkAlignment(BAlign, what = 2)
 checkAlignment(BAlign, what = 3)
-SeqLen<-as.numeric(lapply(BDNA, length))
-library(ggplot2)
+SeqLen<-as.numeric(lapply(BDNA1, length))
 qplot(SeqLen)+theme_bw() #can see that some are not aligning fully- makes sense...I want to keep all of them though
 
 # now distance matrix
@@ -367,7 +373,11 @@ length(BDM)
 BDMmat<-as.matrix(BDM)
 dim(BDMmat)
 
-View(BDMmat)
-library(reshape2)
-PDat<-melt(BbDMmat)
-dim(PDat)
+# want to plot our distance matrix, but need to collapse the same data into 3 columns
+PDat<- melt(BDMmat)
+View(PDat)
+ggplot(data=PDat, aes(x=Var1,y=Var2,fill=value))+geom_tile() #hard to see since two sequences very different from the rest but similar to each other
+ggplot(data=PDat, aes(x=Var1,y=Var2,fill=value))+geom_tile()+scale_fill_gradientn(colours=c("white","blue","green","red"))
+
+# somethings not working- all Nans
+
