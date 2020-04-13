@@ -80,16 +80,12 @@ print(ttest)
 # This doesn't work since it's putting in the species ID
 
 # Try something else
-?entrez_search
-barnowlsci<-comm2sci("barn owl",db="ncbi",itisby="search", simplify=TRUE)
-print(barnowlsci$`barn owl`)
-
-
-
 # Not sure
 ?entrez_search
 ?entrez_fetch
 entrez_db_searchable("nuccore")
+barnowlsci<-comm2sci("barn owl",db="ncbi",itisby="search", simplify=TRUE)
+print(barnowlsci$`barn owl`)
 
 # This seems to work but we get so many different genes- want to compare the same one across all species...
 barnowl<-"Tyto alba[Organism]"
@@ -98,8 +94,11 @@ print(barnowl_search)
 barnowl_seqs <- entrez_fetch(db="nuccore", id=barnowl_search$ids, rettype="fasta")
 print(barnowl_seqs)
 
-katipo <- "Latrodectus katipo[Organism]"
-katipo_search <- entrez_search(db="nuccore", term=katipo)
-print(katipo_search)
-kaitpo_seqs <- entrez_fetch(db="nuccore", id=katipo_search$ids, rettype="fasta")
-print(kaitpo_seqs)
+# Try common name and CYTB gene
+barnowl_search <-entrez_search(db="nuccore", term="barn owl[Organism] AND CYTB[Gene]") # So can search common name- don't need taxize
+print(barnowl_search) #47 hits still
+barnowl_seqs <- entrez_fetch(db="nuccore", id=barnowl_search$ids, rettype="fasta")
+print(barnowl_seqs) # This gives us a lot of hits! Probably will just take the first for each one- seems like the easiest option (and I'm in a time crunch)
+
+owl_summs <- entrez_summary(db="nuccore", id=barnowl_search$ids)
+print(owl_summs)
