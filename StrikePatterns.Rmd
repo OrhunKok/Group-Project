@@ -13,7 +13,7 @@ library(ggplot2)
 ## Bird Migration
 Goal: to investigate if a higher number of birds are hit during their migration period through comparing the relationship between the months of migration (March to April, August to November), the quantity of birds, and the species of birds hit in each strike. We hypothesize that bird species are more likely to be hit during their migration season, and that flocks of birds are also more likely to be hit during migration. As more than 350 North American bird species migrate, we also hypothesize that there will be a significant increase in bird strikes in general in the migration months.
 
-So we want the months 3,4 8, 9, 10 as the migration months.
+So we want the months 3, 4 8, 9, 10 as the migration months.
 
 ### Plot strike frequency by migration season
 
