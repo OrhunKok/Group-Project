@@ -153,18 +153,53 @@ for(i in 1:length(SpeciesSearch)){
 }
 length(idList)
 idList 
+SpeciesFoundList
+SpeciesNotFoundList
 
 # Another test- troubleshooting
-head(idList)
-SpeciesSearch[1]
-testdove <-entrez_search(db="nuccore", term=SpeciesSearch[1])
-print(testdove)
-testdove[1]
+# Getting error Error in ans[[1]] : subscript out of bounds
 idList<-c()
-SpeciesSearch[8]
-searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[8])
-idList<-append(idList, searchtest$ids[1])
-idList
-length(searchtest$ids)==0
+SpeciesFoundList<-c()
+SpeciesNotFoundList<-c()
+for(i in 1:length(SpeciesSearch)){
+  searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[i])
+  if(length(searchtest$ids)==0){
+    SpeciesNotFoundList<-append(SpeciesNotFoundList, SpeciesSearch[i])
+  }else{
+    idList<-append(idList, searchtest$ids[1])
+    SpeciesFoundList<-append(SpeciesFoundList, SpeciesSearch[i])
+  }
+}
+length(idList)
+idList 
+SpeciesFoundList
+SpeciesNotFoundList
+# Got the error again, but it seems to have made it a lot further through the list
+# Made it through 687 of the 710 species
+# So I'm going to move on for now, and come back later- hopefully ferris and orhun can help troubleshoot
+# when I come back maybe try seq_along
 
-head(Species,20)
+BirdCYTBList<-entrez_fetch(db="nuccore", id=idList, rettype="fasta")
+# Got another error
+#Error in entrez_check(response) : 
+#HTTP failure 414, the request is too large. For large requests, try using web history as described in the rentrez tutorial
+
+# Need to use web history
+?entrez_post
+upload <- entrez_post(db="nuccore", id=idList) # Still too large- going to need to split it up more
+idListback<-idList
+length(idListback)
+str(idListback)
+idListback2<-idListback[1:200]
+idListback3<-idListback[200:428]
+
+# Test lengths of about 200- go through it
+?entrez_fetch
+upload2 <- entrez_post(db="nuccore", id=idListback2) 
+BirdCYTBList2<-entrez_fetch(db="nuccore", web_history = upload2, rettype="fasta")
+head(BirdCYTBList2) # just one huge blob
+str(BirdCYTBList2)
+
+upload3 <- entrez_post(db="nuccore", id=idListback3) 
+BirdCYTBList3<-entrez_fetch(db="nuccore", web_history = upload3, rettype="fasta")
+head(BirdCYTBList3)
