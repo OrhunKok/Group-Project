@@ -190,7 +190,7 @@ ggplot(topten, aes(x= Incident.Year, y=n, colour= Species)) +
     ylab("Strike Count") +
   scale_fill_discrete(name="Species")
 
-#ten to twenty
+#select the top 10-20
 X2 = X[11:20,]
 
 toptwen <- Data %>% filter(grepl("EASTERN MEADOWLARK|^HAWK$|CANADA GOOSE|RING-BILLED GULL|CLIFF SWALLOW|^BLACKBIRD$|HERRING GULL|^SWALLOW$|BARN OWL|WESTERN MEADOWLARK", Species.Name))
@@ -202,7 +202,7 @@ toptwen <- toptwen %>%
 
 toptwen$Species <- toptwen$Species.Name
 
-#plot the top twen
+#plot the top 10-20
 ggplot(toptwen, aes(x= Incident.Year, y=n, colour= Species)) + 
   geom_line(aes(colour = Species)) +
    geom_point(aes(colour = Species)) + 
@@ -229,7 +229,7 @@ ggplot(toptwenty, aes(x= Incident.Year, y=n, colour= Species)) +
     ylab("Strike Count") +
   scale_fill_discrete(name="Species")
 
-##For blackbird
+##For blackbird species
 blackbird <- Data %>% filter(grepl("BLACKBIRD", Species.Name))
 blackbird <- blackbird %>% 
   group_by(Incident.Year, Species.Name) %>% 
@@ -243,7 +243,7 @@ ggplot(blackbird, aes(x= Incident.Year, y=n, colour= Species)) +
     ylab("Strike Count") +
   scale_fill_discrete(name="Species", position = "top")
 
-#For swallow
+#For swallow species
 swallow <- Data %>% filter(grepl("SWALLOW", Species.Name))
 swallow <- swallow %>% 
   group_by(Incident.Year, Species.Name) %>% 
@@ -257,7 +257,7 @@ ggplot(swallow, aes(x= Incident.Year, y=n, colour= Species)) +
     ylab("Strike Count") +
   scale_fill_discrete(name="Species")
 
-#For sparrow
+#For sparrow species
 sparrow <- Data %>% filter(grepl("SPARROW", Species.Name))
 sparrow <- sparrow %>% 
   group_by(Incident.Year, Species.Name) %>% 
@@ -271,7 +271,7 @@ ggplot(sparrow, aes(x= Incident.Year, y=n, colour= Species)) +
     ylab("Strike Count") +
   scale_fill_discrete(name="Species")
 
-#For gull
+#For gull species
 gull <- Data %>% filter(grepl("GULL", Species.Name))
 gull <- gull %>% 
   group_by(Incident.Year, Species.Name) %>% 
@@ -285,13 +285,14 @@ ggplot(gull, aes(x= Incident.Year, y=n, colour= Species)) +
     ylab("Strike Count") +
   scale_fill_discrete(name="Species")
 
-#for dove
+#for dove species
 dove <- Data %>% filter(grepl("DOVE", Species.Name))
 dove <- dove %>% 
   group_by(Incident.Year, Species.Name) %>% 
   tally()
 dove$Species <- dove$Species.Name
-#nice dove
+
+#nice dove species plot
 ggplot(dove, aes(x= Incident.Year, y=n, colour= Species)) + 
   geom_line(aes(colour = Species)) +
    geom_point(aes(colour = Species)) + 
@@ -308,7 +309,7 @@ ggplot(dove, aes(x= Incident.Year, y=n, colour= Species)) +
   guides(fill=guide_legend(nrow=2,byrow=TRUE))
 
 
-#nicer blackbird and gull
+#nicer blackbird species plot
 ggplot(blackbird, aes(x= Incident.Year, y=n, colour= Species)) + 
   geom_line(aes(colour = Species)) +
    geom_point(aes(colour = Species)) + 
@@ -324,8 +325,7 @@ ggplot(blackbird, aes(x= Incident.Year, y=n, colour= Species)) +
   ylab("Strike Count") +
   guides(fill=guide_legend(nrow=4,byrow=TRUE))
 
-   theme_set(theme_bw()) +
-
+#nicer gull species plot
 ggplot(gull, aes(x= Incident.Year, y=n, colour= Species)) + 
   geom_line(aes(colour = Species)) +
    geom_point(aes(colour = Species)) + 
