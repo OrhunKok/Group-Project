@@ -129,3 +129,19 @@ print(barnowl_search) #47 hits still
 barnowl_search <-entrez_search(db="nuccore", term="BARN OWL[Organism] AND CYTB[Gene]")
 print(barnowl_search)
 # Okay cool upper case searches work well too
+
+# Okay first I need to append [Organism] AND CYTB[Gene] to each species name
+str(Species)
+# Try this
+SpeciesSearch <- paste(Species, "[Organism] AND CYTB[Gene]", sep="")
+SpeciesSearch # Looks good
+length(SpeciesSearch)
+
+# Now write loop
+idList<-c()
+for(i in 1:length(SpeciesSearch)){
+  searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[i])
+  idList<-append(idList, searchtest[1])
+}
+
+
