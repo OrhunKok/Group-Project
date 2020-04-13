@@ -60,13 +60,63 @@ speciesstrikes[speciesstrikes$SpeciesStrikes==max(speciesstrikes$SpeciesStrikes)
 speciesstrikes[speciesstrikes$SpeciesStrikes==min(speciesstrikes$SpeciesStrikes),] # WY has the lowest diversity of strikes with 31
 # not very interesting since it just matches the total number of strikes
 
+# maybe should standardize by the number of airports again
+test<-c()
+airportnum<-c() #will be number of airports in each state
+for(i in 1:length(states)){
+  test<-datas[datas$State==states[i],c(6,7)]
+  airportnum<-append(airportnum,length(unique(test$Airport)))
+}
+head(airportnum)
+speciesstrikess<-data.frame(state=states, SpeciesStrikes=round(speciesnum/airportnum))
+head(speciesstrikess)
+View(speciesstrikess)
+summary(speciesstrikess) # min 2 median 4 mean 5.25 max 60
+speciesstrikess[speciesstrikess$SpeciesStrikes==max(speciesstrikess$SpeciesStrikes),] # DC with 60
+speciesstrikess[speciesstrikess$SpeciesStrikes==min(speciesstrikess$SpeciesStrikes),]
+dim(speciesstrikess[speciesstrikess$SpeciesStrikes==min(speciesstrikess$SpeciesStrikes),]) # 12 states with just 2 species
+# Not super interesting either
+
 # Find the species hit the most in each state
 test3<-c()
+length(states)
 specieshitmax<-c() #will be number of species hit in each state
+amountofhits<-c()
+testtable<-c()
+for(i in 1:51){
+  test3<-datas2[datas2$State==states[i],c(7,17)]
+  testtable<-as.data.frame(table(test3$Species.Name))
+  specieshitmax<-append(specieshitmax,as.character(testtable[testtable$Freq==max(testtable$Freq),1]))
+  amountofhits<-append(amountofhits,testtable[testtable$Freq==max(testtable$Freq),2])
+}
+length(specieshitmax)
+specieshitmax
+length(amountofhits)
+amountofhits
+states
+# getting 52 instead of 51! There's a tie!
+# Troubleshoot this- it's at index 17
+
+# Fix loop
+test3<-c()
+length(states)
+specieshitmax<-c() #will be number of species hit in each state
+amountofhits<-c()
+testtable<-c()
 for(i in 1:length(states)){
   test3<-datas2[datas2$State==states[i],c(7,17)]
-  specieshitmax<-append(specieshitmax,length(unique(test2$Species.Name)))
+  testtable<-as.data.frame(table(test3$Species.Name))
+  specieshitmax<-append(specieshitmax,paste(as.character(testtable[testtable$Freq==max(testtable$Freq),1]), collapse = "/"))
+  amountofhits<-append(amountofhits,testtable[testtable$Freq==max(testtable$Freq),2][1])
 }
+length(specieshitmax)
+specieshitmax
+length(amountofhits)
+amountofhits
+states
+speciesstrikes2<-data.frame(state=states, Species=specieshitmax, Hits=amountofhits)
+head(speciesstrikes2)
+View(speciesstrikes2)
+summary(speciesstrikes2) # min 31 median 113 mean 120 max 279
 
-levels(test2$Species.Name)
-
+# Now need to make a map
