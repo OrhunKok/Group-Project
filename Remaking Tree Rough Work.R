@@ -1,5 +1,6 @@
 # Sasha's Script April 12th, 2020
 # Trying to see if I can remake the phylogenetic tree that Navneetha made and doesn't have code for
+# Except she won't help and doesn't seem to recall any of the steps- so I'm pretty much just remaking my own tree
 
 # The only bit of code from Navneetha- pretty useless - I tried running it and nothing works
 # I don't think it's actually valid...missing important aspects
@@ -67,6 +68,7 @@ SpeciesSci<-comm2sci(Species,db="ncbi",itisby="search", simplify=TRUE)
 #' does not exist in current working directory ('C:/Users/sasha/Desktop/School 2019-2020/BIOL 432/Group-Project').
 # Going to need to figure out this API stuff
 
+# Going to work through the whole process with one species, then go back to do all of them
 # Rr it seems I can pass the common name directly into get_uid to get the taxonomy ID
 get_uid("barn owl", modifier="Common Name")
 str(get_uid("barn owl", modifier="Common Name"))
@@ -95,6 +97,7 @@ barnowl_seqs <- entrez_fetch(db="nuccore", id=barnowl_search$ids, rettype="fasta
 print(barnowl_seqs)
 
 # Try common name and CYTB gene
+# I'm choosing the cytb gene since it's one of the most frequently used genetic loci to id species- I think it will give us a really nice tree
 barnowl_search <-entrez_search(db="nuccore", term="barn owl[Organism] AND CYTB[Gene]") # So can search common name- don't need taxize
 print(barnowl_search) #47 hits still
 barnowl_seqs <- entrez_fetch(db="nuccore", id=barnowl_search$ids, rettype="fasta")
@@ -102,3 +105,27 @@ print(barnowl_seqs) # This gives us a lot of hits! Probably will just take the f
 
 owl_summs <- entrez_summary(db="nuccore", id=barnowl_search$ids)
 print(owl_summs)
+titles <- extract_from_esummary(owl_summs, "title")
+unname(titles)
+# We can see the first hit is "Tyto alba cytochrome b (cytb) gene, partial cds; mitochondrial" 
+
+# Try to just get the first hit sequence
+owl_ids <- barnowl_search$ids[1]
+print(owl_ids)
+CYTBowl <- entrez_fetch(db="nuccore", id=owl_ids, rettype="fasta")
+print(CYTBowl) # YAY so that's the cytochrome b gene of a barn owl
+
+# Now I just need to get this for all the species....
+# If I can just get the NCBI ids (first hit) of CYTB in all the species then I can put it into a vector and into entrez_fetch
+
+# Test to see if I can use a vector of terms in entrez search
+testlist<-c("barn owl[Organism] AND CYTB[Gene]","red-tailed hawk[Organism] AND CYTB[Gene]")
+barnowl_search <-entrez_search(db="nuccore", term=testlist) # It says value must be one
+# So it looks like I need to search each species one at a time
+barnowl_search <-entrez_search(db="nuccore", term=testlist[1]) #this works though so I could make a vector and use a loop
+print(barnowl_search) #47 hits still
+
+# Do I need to make all my species lowercase? Test it out
+barnowl_search <-entrez_search(db="nuccore", term="BARN OWL[Organism] AND CYTB[Gene]")
+print(barnowl_search)
+# Okay cool upper case searches work well too
