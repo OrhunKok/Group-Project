@@ -214,4 +214,14 @@ tester2[[1]][2] # that isolates the species name- in this case Zenaida macroura
 # so to actually get what I want would be
 paste(tester2[[1]][2],"cytochrome b (cytb) gene, partial cds; mitochondrial")
 # The question is how can I use this to get the specific hit
+str(searchtesestt)
+summs <- entrez_summary(db="nuccore", id=searchtesestt$ids)
+print(owl_summs)
+titles <- extract_from_esummary(summs, "title")
+unname(titles) # here you can see the third one is the one I want
+# but gonna double check
+check<-entrez_fetch(db="nuccore", id=searchtesestt$ids[3], rettype="fasta")
+print(check)
+# Okay cool
 
+# Now need to incorporate this into my loop to double check it's the right sequence- not the full genome
