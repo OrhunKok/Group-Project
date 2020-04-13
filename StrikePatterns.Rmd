@@ -1,0 +1,341 @@
+---
+title: "Visualizations"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+## Bird Migration
+Goal: to investigate if a higher number of birds are hit during their migration period through comparing the relationship between the months of migration (March to April, August to November), the quantity of birds, and the species of birds hit in each strike. We hypothesize that bird species are more likely to be hit during their migration season, and that flocks of birds are also more likely to be hit during migration. As more than 350 North American bird species migrate, we also hypothesize that there will be a significant increase in bird strikes in general in the migration months.
+
+So we want the months 3,4 8, 9, 10 as the migration months.
+
+### Plot strike frequency by migration season
+
+```{r cars}
+snarge <- read.csv("~/Desktop/Snarge/database.csv")
+
+#make chart of number of hits per month
+hitsbymonth <- snarge %>%
+  select(c(Incident.Month, Species.Name)) 
+
+#create a season catagory
+hitsbymonth$migrationseason <- "yes"
+hitsbymonth$migrationseason <- ifelse(hitsbymonth$Incident.Month %in% (3:4) | hitsbymonth$Incident.Month %in% (8:10), hitsbymonth$migrationseason, "no")
+
+#change month names
+hitsbymonth$Incident.Month <- as.factor(hitsbymonth$Incident.Month)
+levels(hitsbymonth$Incident.Month) <- c("Jan", "Feb", "Mar","Apr", "May", "Jun","Jul", "Aug", "Sep","Oct", "Nov", "Dec")
+
+#create an 'incident count' catagory
+hitsbymonth$count <- 1
+
+#plot
+ggplot(data=hitsbymonth, aes(x = Incident.Month, y= count, fill = migrationseason)) +
+    xlab("Month") +
+    ylab("Incident Count") +
+    geom_bar(stat="identity") +
+  theme_classic() +
+  scale_fill_manual(values=c("#999999", "#E69F00"), 
+                       name="Migration\nSeason",
+                       labels=c("Off months", "On months")) +
+    theme(axis.text.x=element_text(angle=60,vjust=0.5))
+
+```
+
+## Plot strike severity by month
+
+```{r pressure}
+
+#plot SIZE of impact
+quant <- snarge %>% 
+  select(c(Incident.Year, Incident.Month, Incident.Day, Species.ID, Species.Name, Species.Quantity))
+
+#levels(as.factor(quant$Species.Quantity))
+#               1   10-Feb   11-100 Over 100 
+#    4477   146563    21852     1166       46
+
+#replace each range with the middle value of that range
+quant$Species.Quantity <- gsub("10-Feb", "5", as.character(quant$Species.Quantity))
+quant$Species.Quantity <- gsub("11-100", "50", as.character(quant$Species.Quantity))
+quant$Species.Quantity <- gsub("Over 100", "100", as.character(quant$Species.Quantity))
+
+#change to integer class
+quant$Species.Quantity <- as.integer(quant$Species.Quantity)
+
+#put quantity data into hitsbymonth dataframe
+hitsbymonth$quant <- quant$Species.Quantity
+
+#remove NAs and count total hits per month
+hitsbymonth %>% 
+  group_by(Incident.Month) %>% 
+  na.omit() %>% 
+  summarise(sum=sum(quant))
+
+ggplot(data=hitsbymonth, aes(x = Incident.Month, y=quant, fill = migrationseason)) +
+    xlab("Month") +
+    ylab("Incident Count") +
+    geom_bar(stat="identity") +
+  theme_classic() +
+  scale_fill_manual(values=c("#999999", "#E69F00"), 
+                       name="Migration\nSeason",
+                       labels=c("Off months", "On months")) +
+    theme(axis.text.x=element_text(angle=60,vjust=0.5))
+
+##make a stacked barchart that has bigger flocks colour coded as darker blue
+hitsbymonth$quant <- as.factor(hitsbymonth$quant)
+
+ggplot(data=hitsbymonth, aes(x = Incident.Month, y=count, fill = quant)) +
+    xlab("Month") +
+    ylab("Incident Count") +
+    geom_bar(stat="identity") +
+  theme_classic() +
+  scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9", "#FF5733"), 
+                       name="Migration\nSeason",
+                       labels=c("1", "1-10", "10-100", "100+")) +
+    theme(axis.text.x=element_text(angle=60,vjust=0.5))
+
+#try filtering out single hits...
+
+big <- hitsbymonth %>% filter(quant == 5 | quant == 50 | quant == 100)
+
+ggplot(data=big, aes(x = Incident.Month, y=count, fill = quant)) +
+    xlab("Month") +
+    ylab("Incident Count") +
+    geom_bar(stat="identity") +
+  theme_classic() +
+  scale_fill_manual(values=c("#BFF6FB", "#24C4D0", "#086A72"), 
+                       name="Flock\nSize",
+                       labels=c("2-10", "10-100", "100+")) +
+    theme(axis.text.x=element_text(angle=60,vjust=0.5))
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{Orhun stuff}
+#Setup
+library(dplyr)
+library(ggplot2)
+Data <- snarge
+
+# There are 715 unique labels for species for the data not counting blank cells
+unique(Data$Species.Name)
+
+#remove unneeded variables
+Data <- Data %>% 
+  select(c(Incident.Year, Incident.Month, Incident.Day, Species.ID, Species.Name, Species.Quantity))
+
+#break up data into 5 year chunks
+Data$Chunk <- Data$Incident.Year
+Data$Chunk <- gsub("1990|1991|1992|1993|1994", "1", Data$Chunk)
+Data$Chunk <- gsub("1995|1996|1997|1998|1999", "2", Data$Chunk)
+Data$Chunk <- gsub("2000|2001|2002|2003|2004", "3", Data$Chunk)
+Data$Chunk <- gsub("2005|2006|2007|2008|2009", "4", Data$Chunk)
+Data$Chunk <- gsub("2010|2011|2012|2013|2014|2015", "5", Data$Chunk)
+
+#Creating table arranged by frequency
+X <- table(Data$Species.Name)
+X <- sort(table(Data$Species.Name),decreasing=T)
+
+#Removing Unknown species and renaming column
+X = as.data.frame(X)
+X = X[- grep("UNKNOWN", X$Var1),]
+names(X)[names(X) == "Var1"] = "Species"
+
+#Narrow to top 10 since its not possible or organized to display all species
+X1 = X[1:10,]
+
+#Plot Setup
+theme_pubworthy = function (base_size = 12, base_family = "") {
+  theme_classic(base_size = base_size, base_family = base_family) %+replace% 
+    theme(
+      axis.text = element_text(colour = "black"),
+      axis.title.x = element_text(size=18),
+      axis.text.x = element_text(size=6),
+      axis.title.y = element_text(size=18,angle=90),
+      axis.text.y = element_text(size=10),
+      axis.ticks = element_blank(), 
+      panel.background = element_rect(fill="white"),
+      panel.border = element_blank(),
+      plot.title=element_text(face="bold", size=24),
+      legend.position="none"
+    ) 
+}
+
+#make a line for each different species, and have their hits  over all the years
+#need to make a dataframe with each of top 10 species as a column, with their frequency for each year
+
+#this had the problem of grabbing many types of gulls/sparrows, fixed now
+topten <- Data %>% filter(grepl("MOURNING DOVE|^GULL$|KILLDEER|AMERICAN KESTREL|BARN SWALLOW|HORNED LARK|EUROPEAN STARLING|^SPARROW$|ROCK PIGEON|RED-TAILED HAWK", Species.Name))
+#summary(as.factor(as.character(topten$Species.Name)))
+
+topten <- topten %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+
+topten$Species <- topten$Species.Name
+
+#plot the top ten
+ggplot(topten, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+    theme_classic() +
+  xlab("Year") +
+    ylab("Strike Count") +
+  scale_fill_discrete(name="Species")
+
+#select the top 10-20
+X2 = X[11:20,]
+
+toptwen <- Data %>% filter(grepl("EASTERN MEADOWLARK|^HAWK$|CANADA GOOSE|RING-BILLED GULL|CLIFF SWALLOW|^BLACKBIRD$|HERRING GULL|^SWALLOW$|BARN OWL|WESTERN MEADOWLARK", Species.Name))
+#summary(as.factor(as.character(topten$Species.Name)))
+
+toptwen <- toptwen %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+
+toptwen$Species <- toptwen$Species.Name
+
+#plot the top 10-20
+ggplot(toptwen, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+    theme_classic() +
+  xlab("Year") +
+    ylab("Strike Count") +
+  scale_fill_discrete(name="Species")
+
+#try all 20 together
+toptwenty <- Data %>% filter(grepl("EASTERN MEADOWLARK|^HAWK$|CANADA GOOSE|RING-BILLED GULL|CLIFF SWALLOW|^BLACKBIRD$|HERRING GULL|^SWALLOW$|BARN OWL|WESTERN MEADOWLARK|MOURNING DOVE|^GULL$|KILLDEER|AMERICAN KESTREL|BARN SWALLOW|HORNED LARK|EUROPEAN STARLING|^SPARROW$|ROCK PIGEON|RED-TAILED HAWK", Species.Name))
+
+toptwenty <- toptwenty %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+
+toptwenty$Species <- toptwenty$Species.Name
+
+#plot top twenty
+ggplot(toptwenty, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+    theme_classic() +
+  xlab("Year") +
+    ylab("Strike Count") +
+  scale_fill_discrete(name="Species")
+
+##For blackbird species
+blackbird <- Data %>% filter(grepl("BLACKBIRD", Species.Name))
+blackbird <- blackbird %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+blackbird$Species <- blackbird$Species.Name
+ggplot(blackbird, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+    theme_classic() +
+  xlab("Year") +
+    ylab("Strike Count") +
+  scale_fill_discrete(name="Species", position = "top")
+
+#For swallow species
+swallow <- Data %>% filter(grepl("SWALLOW", Species.Name))
+swallow <- swallow %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+swallow$Species <- swallow$Species.Name
+ggplot(swallow, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+    theme_classic() +
+  xlab("Year") +
+    ylab("Strike Count") +
+  scale_fill_discrete(name="Species")
+
+#For sparrow species
+sparrow <- Data %>% filter(grepl("SPARROW", Species.Name))
+sparrow <- sparrow %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+sparrow$Species <- sparrow$Species.Name
+ggplot(sparrow, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+    theme_classic() +
+  xlab("Year") +
+    ylab("Strike Count") +
+  scale_fill_discrete(name="Species")
+
+#For gull species
+gull <- Data %>% filter(grepl("GULL", Species.Name))
+gull <- gull %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+gull$Species <- gull$Species.Name
+ggplot(gull, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+    theme_classic() +
+  xlab("Year") +
+    ylab("Strike Count") +
+  scale_fill_discrete(name="Species")
+
+#for dove species
+dove <- Data %>% filter(grepl("DOVE", Species.Name))
+dove <- dove %>% 
+  group_by(Incident.Year, Species.Name) %>% 
+  tally()
+dove$Species <- dove$Species.Name
+
+#nice dove species plot
+ggplot(dove, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+  theme(legend.position = "bottom", legend.title = element_blank(),
+  panel.border = element_blank(),  
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.background = element_blank(),
+  axis.line = element_line(colour = "grey"),
+  legend.key=element_blank()
+  ) +
+  xlab("Year") +
+  ylab("Strike Count") +
+  guides(fill=guide_legend(nrow=2,byrow=TRUE))
+
+
+#nicer blackbird species plot
+ggplot(blackbird, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+  theme(legend.position = "bottom", legend.title = element_blank(),
+  panel.border = element_blank(),  
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.background = element_blank(),
+  axis.line = element_line(colour = "grey"),
+  legend.key=element_blank()
+  ) +
+  xlab("Year") +
+  ylab("Strike Count") +
+  guides(fill=guide_legend(nrow=4,byrow=TRUE))
+
+#nicer gull species plot
+ggplot(gull, aes(x= Incident.Year, y=n, colour= Species)) + 
+  geom_line(aes(colour = Species)) +
+   geom_point(aes(colour = Species)) + 
+  theme(legend.position = "bottom", legend.title = element_blank(),
+  panel.border = element_blank(),  
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.background = element_blank(),
+  axis.line = element_line(colour = "grey"),
+  legend.key=element_blank(),
+  ) +
+  xlab("Year") +
+  ylab("Strike Count")
