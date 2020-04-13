@@ -203,3 +203,15 @@ str(BirdCYTBList2)
 upload3 <- entrez_post(db="nuccore", id=idListback3) 
 BirdCYTBList3<-entrez_fetch(db="nuccore", web_history = upload3, rettype="fasta")
 head(BirdCYTBList3)
+
+# AH so I'm realizing taking the first hit doesn't really work since sometimes the full mitochondrial genome pops up first
+# So I need to find a way to use the species name and then "cytochrome b (cytb) gene, partial cds; mitochondrial" and then choose that hit
+# So test out the first one again
+SpeciesSearch[1]
+searchtesestt <-entrez_search(db="nuccore", term=SpeciesSearch[1])
+tester2<-strsplit(searchtesestt$QueryTranslation[1],"\"")
+tester2[[1]][2] # that isolates the species name- in this case Zenaida macroura
+# so to actually get what I want would be
+paste(tester2[[1]][2],"cytochrome b (cytb) gene, partial cds; mitochondrial")
+# The question is how can I use this to get the specific hit
+
