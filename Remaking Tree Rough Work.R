@@ -33,7 +33,6 @@ install.packages("taxize")
 # Load libraries
 library(rentrez)
 library(taxize)
-library(purrr)
 
 # Load data
 data<-read.csv("NEwDataset.csv", header=TRUE, stringsAsFactors = FALSE, row.names = "X")
@@ -234,7 +233,6 @@ position
 idList<-c()
 SpeciesFoundList<-c()
 SpeciesNotFoundList<-c()
-CYTBnotFound<-c()
 for(i in 1:2){
   searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[i])
   if(length(searchtest$ids)==0){
@@ -255,9 +253,8 @@ idList
 SpeciesFoundList
 SpeciesNotFoundList
 
-head(SpeciesSearch)
-
 # So just in the preliminary test gull is NA
+# check this out more
 searchtesestt <-entrez_search(db="nuccore", term=SpeciesSearch[2])
 print(searchtesestt)
 tester2<-strsplit(searchtesestt$QueryTranslation[1],"\"")
@@ -276,12 +273,11 @@ unname(titles)[unname(titles)==see]
 position<-match(see,unname(titles))
 position
 
-# Still working on loop
+#Try this loop for all of them-- see how many NAs we get
 idList<-c()
 SpeciesFoundList<-c()
 SpeciesNotFoundList<-c()
-CYTBnotFound<-c()
-for(i in 1:2){
+for(i in 1:length(SpeciesSearch)){
   searchtest <-entrez_search(db="nuccore", term=SpeciesSearch[i])
   if(length(searchtest$ids)==0){
     SpeciesNotFoundList<-append(SpeciesNotFoundList, SpeciesSearch[i])
@@ -291,12 +287,52 @@ for(i in 1:2){
     summs <- entrez_summary(db="nuccore", id=searchtest$ids)
     titles <- extract_from_esummary(summs, "title")
     position<-match(check,unname(titles))
-    if(is.na(position)){
-      CYTBnotFound<-append(CYTBnotFound,SpeciesSearch[i])
-    }else{
-      idList<-append(idList, searchtest$ids[position])
-      SpeciesFoundList<-append(SpeciesFoundList, SpeciesSearch[i])
-    }
-    
+    idList<-append(idList, searchtest$ids[position])
+    SpeciesFoundList<-append(SpeciesFoundList, SpeciesSearch[i])
   }
 }
+
+length(idList)
+idList 
+sum(is.na(idList)) #338 NAs
+# So will only have 102 species in the phylogeny
+SpeciesFoundList # Some kind of hit for 440 species- a lot of them not the right cytochrome b gene though
+SpeciesNotFoundList # Not hits for 270 species
+# Now that I'm reflecting, and if we'd had more time I could have compared whether whole mitochondrial genome, or 12s rRNA gene would have allowed us to include more species in the phylogeny
+# But I'm tight for time so 102 species will have to do!
+
+SpeciesIDs<-data.frame(Species=SpeciesFoundList, IDs=idList)
+head(SpeciesIDs)
+SpeciesIDsfull<-na.omit(SpeciesIDs)
+dim(SpeciesIDsfull)
+SpeciesIDsfull
+
+UsefulIDs<-SpeciesIDsfull$IDs
+str(UsefulIDs)
+length(UsefulIDs)
+UsefulIDs<-as.character(UsefulIDs)
+
+# Try to get sequences
+BirdCYTBList<-entrez_fetch(db="nuccore", id=UsefulIDs, rettype="fasta")
+BirdCYTBList
+
+# Split into sequences
+Sequences<-strsplit(BirdCYTBList,"\n\n")
+print(Sequences)
+Sequences<-unlist(Sequences)
+header<-gsub("(^>.*mitochondrial)\\n[ATCG].*","\\1",Sequences)
+print(header)
+seq<-gsub("^>.*mitochondrial\\n([ATCG].*)","\\1",Sequences)
+Sequences<-data.frame(Name=header,Sequence=seq)
+
+#Now remove the newline characters from the Sequences data frame using regular expressions
+print(Sequences)
+View(Sequences)
+?gsub()
+Sequences$Name<-gsub("\n","",Sequences$Name)
+Sequences$Sequence<-gsub("\n","",Sequences$Sequence)
+print(Sequences)
+View(Sequences)
+
+#Output this vector to a file called Sequences.csv.
+write.csv(Sequences,file="Sequences.csv")
