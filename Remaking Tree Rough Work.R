@@ -33,6 +33,7 @@ install.packages("taxize")
 # Load libraries
 library(rentrez)
 library(taxize)
+library(ape)
 
 # Load data
 data<-read.csv("NEwDataset.csv", header=TRUE, stringsAsFactors = FALSE, row.names = "X")
@@ -336,3 +337,37 @@ View(Sequences)
 
 #Output this vector to a file called Sequences.csv.
 write.csv(Sequences,file="Sequences.csv")
+
+# Now work on aligning the sequences and so on
+BDNA<-sapply(Sequences$Sequence,strsplit,split="")
+head(BDNA)
+head(Sequences$Name)
+names(BDNA)<-paste(1:nrow(Sequences),Sequences$Name, sep = "_") #combine row number with sequence ID as new identifiers
+names(BDNA)
+# didn't really need to do that step but oh well
+
+#now need to convert it to a DNA bin object
+BDNA<-as.DNAbin(BDNA)
+BAlign<- ape::muscle(BDNA, quiet = FALSE)
+str(BAlign)
+
+#Checking
+checkAlignment(BAlign, what = 1)
+checkAlignment(BAlign, what = 2)
+checkAlignment(BAlign, what = 3)
+SeqLen<-as.numeric(lapply(BDNA, length))
+library(ggplot2)
+qplot(SeqLen)+theme_bw() #can see that some are not aligning fully- makes sense...I want to keep all of them though
+
+# now distance matrix
+?dist.dna()
+BDM<-dist.dna(BAlign, model="K80")
+class(BDM)
+length(BDM)
+BDMmat<-as.matrix(BDM)
+dim(BDMmat)
+
+View(BDMmat)
+library(reshape2)
+PDat<-melt(BbDMmat)
+dim(PDat)
