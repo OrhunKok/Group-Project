@@ -20,8 +20,9 @@ library(usmap)
 library(maptools)
 library(rgdal)
 library(maps)
-library(rworldmap)
-library(magick)
+library(scales)
+library(RColorBrewer)
+
 
 # First make map coloured by the species hit the most in each state
 length(unique(data$State)) # need to filter for US states
@@ -119,4 +120,52 @@ head(speciesstrikes2)
 View(speciesstrikes2)
 summary(speciesstrikes2) # min 31 median 113 mean 120 max 279
 
-# Now need to make a map
+# Now need to make a map- first of hits
+p1<-plot_usmap(data = speciesstrikes2, values = "Hits", color = "grey") + 
+  scale_fill_continuous(low= "white", high= "darkslategray3",name = "Number of Bird Strikes per Airport in each State", label = scales::comma) + 
+  theme(legend.position = "right",
+        axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        panel.border=element_blank())
+p1
+?plot_usmap
+
+# Now need to make a map of species coloured
+p2<-plot_usmap(data = speciesstrikes2, values = "Species", color = "grey") + 
+  scale_fill_discrete(name="Species")+
+  theme(legend.position = "right",
+        axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        panel.border=element_blank())
+p2
+# colours are ugly needs to be fixed
+# Define the number of colors you want
+nb.cols <- 14
+mycolors <- colorRampPalette(brewer.pal(8, "Spectral"))(nb.cols)
+
+p2<-plot_usmap(data = speciesstrikes2, values = "Species", color = "grey") + 
+  scale_fill_manual(values = mycolors,name="Species")+
+  theme(legend.position = "right",
+        axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        panel.border=element_blank())
+p2
+ggsave("Speciesmap.png", p2, bg = "transparent",width = 10,height =5,units = "in")
