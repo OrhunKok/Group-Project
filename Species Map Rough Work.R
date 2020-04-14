@@ -20,8 +20,9 @@ library(usmap)
 library(maptools)
 library(rgdal)
 library(maps)
-library(rworldmap)
-library(magick)
+library(scales)
+library(RColorBrewer)
+
 
 # First make map coloured by the species hit the most in each state
 length(unique(data$State)) # need to filter for US states
@@ -60,13 +61,111 @@ speciesstrikes[speciesstrikes$SpeciesStrikes==max(speciesstrikes$SpeciesStrikes)
 speciesstrikes[speciesstrikes$SpeciesStrikes==min(speciesstrikes$SpeciesStrikes),] # WY has the lowest diversity of strikes with 31
 # not very interesting since it just matches the total number of strikes
 
+# maybe should standardize by the number of airports again
+test<-c()
+airportnum<-c() #will be number of airports in each state
+for(i in 1:length(states)){
+  test<-datas[datas$State==states[i],c(6,7)]
+  airportnum<-append(airportnum,length(unique(test$Airport)))
+}
+head(airportnum)
+speciesstrikess<-data.frame(state=states, SpeciesStrikes=round(speciesnum/airportnum))
+head(speciesstrikess)
+View(speciesstrikess)
+summary(speciesstrikess) # min 2 median 4 mean 5.25 max 60
+speciesstrikess[speciesstrikess$SpeciesStrikes==max(speciesstrikess$SpeciesStrikes),] # DC with 60
+speciesstrikess[speciesstrikess$SpeciesStrikes==min(speciesstrikess$SpeciesStrikes),]
+dim(speciesstrikess[speciesstrikess$SpeciesStrikes==min(speciesstrikess$SpeciesStrikes),]) # 12 states with just 2 species
+# Not super interesting either
+
 # Find the species hit the most in each state
 test3<-c()
+length(states)
 specieshitmax<-c() #will be number of species hit in each state
+amountofhits<-c()
+testtable<-c()
+for(i in 1:51){
+  test3<-datas2[datas2$State==states[i],c(7,17)]
+  testtable<-as.data.frame(table(test3$Species.Name))
+  specieshitmax<-append(specieshitmax,as.character(testtable[testtable$Freq==max(testtable$Freq),1]))
+  amountofhits<-append(amountofhits,testtable[testtable$Freq==max(testtable$Freq),2])
+}
+length(specieshitmax)
+specieshitmax
+length(amountofhits)
+amountofhits
+states
+# getting 52 instead of 51! There's a tie!
+# Troubleshoot this- it's at index 17
+
+# Fix loop
+test3<-c()
+length(states)
+specieshitmax<-c() #will be number of species hit in each state
+amountofhits<-c()
+testtable<-c()
 for(i in 1:length(states)){
   test3<-datas2[datas2$State==states[i],c(7,17)]
-  specieshitmax<-append(specieshitmax,length(unique(test2$Species.Name)))
+  testtable<-as.data.frame(table(test3$Species.Name))
+  specieshitmax<-append(specieshitmax,paste(as.character(testtable[testtable$Freq==max(testtable$Freq),1]), collapse = "/"))
+  amountofhits<-append(amountofhits,testtable[testtable$Freq==max(testtable$Freq),2][1])
 }
+length(specieshitmax)
+specieshitmax
+length(amountofhits)
+amountofhits
+states
+speciesstrikes2<-data.frame(state=states, Species=specieshitmax, Hits=amountofhits)
+head(speciesstrikes2)
+View(speciesstrikes2)
+summary(speciesstrikes2) # min 31 median 113 mean 120 max 279
 
-levels(test2$Species.Name)
+# Now need to make a map- first of hits
+p1<-plot_usmap(data = speciesstrikes2, values = "Hits", color = "grey") + 
+  scale_fill_continuous(low= "white", high= "darkslategray3",name = "Number of Bird Strikes per Airport in each State", label = scales::comma) + 
+  theme(legend.position = "right",
+        axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        panel.border=element_blank())
+p1
+?plot_usmap
 
+# Now need to make a map of species coloured
+p2<-plot_usmap(data = speciesstrikes2, values = "Species", color = "grey") + 
+  scale_fill_discrete(name="Species")+
+  theme(legend.position = "right",
+        axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        panel.border=element_blank())
+p2
+# colours are ugly needs to be fixed
+# Define the number of colors you want
+nb.cols <- 14
+mycolors <- colorRampPalette(brewer.pal(8, "Spectral"))(nb.cols)
+
+p2<-plot_usmap(data = speciesstrikes2, values = "Species", color = "grey") + 
+  scale_fill_manual(values = mycolors,name="Species")+
+  theme(legend.position = "right",
+        axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        panel.border=element_blank())
+p2
+ggsave("Speciesmap.png", p2, bg = "transparent",width = 10,height =5,units = "in")
