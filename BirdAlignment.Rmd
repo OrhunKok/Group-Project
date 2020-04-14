@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(ape)
 library(reshape2)
+library(ggtree)
 ```
 
 ## Alignment
@@ -47,7 +48,7 @@ qplot(SeqLen)+theme_bw() #can see that some are not aligning fully- makes sense.
 # now distance matrix
 #?dist.dna()
 #BDM<-dist.dna(BAlign, model="K80") #all NaN :/
-BDM <- dist.dna(BAlign, model = "raw", pairwise.deletion=TRUE, as.matrix = TRUE) #check if distances are above 0.75
+BDM <- dist.dna(BAlign, model = "raw", pairwise.deletion=TRUE) #check if distances are above 0.75
 class(BDM)
 length(BDM)
 BDMmat<-as.matrix(BDM)
@@ -57,18 +58,51 @@ dim(BDMmat)
 PDat<- melt(BDMmat)
 View(PDat)
 
-#chop the very long names down to just species name.
+#chop the very long labels down to just species name
 PDat$Var1 <- gsub("()(cytochrome b \\(cytb\\) gene, partial cds; mitochondrial)", "\\1", PDat$Var1)
 PDat$Var1 <- gsub("(.{13})(\\s)(\\w+)(\\s)(\\w+)", "\\2\\3\\4\\5", PDat$Var1)
-PDat$Var1 <- gsub("[1-9]", "", PDat$Var1)
+PDat$Var1 <- gsub("[0-9]", "", PDat$Var1)
 PDat$Var2 <- gsub("()(cytochrome b \\(cytb\\) gene, partial cds; mitochondrial)", "\\1", PDat$Var2)
 PDat$Var2 <- gsub("(.{13})(\\s)(\\w+)(\\s)(\\w+)", "\\2\\3\\4\\5", PDat$Var2)
-PDat$Var2 <- gsub("[1-9]", "", PDat$Var2)
+PDat$Var2 <- gsub("[0-9]", "", PDat$Var2)
 
 ggplot(data=PDat, aes(x=Var1,y=Var2,fill=value))+geom_tile() #hard to see since two sequences very different from the rest but similar to each other
 ggplot(data=PDat, aes(x=Var1,y=Var2,fill=value))+geom_tile()+scale_fill_gradientn(colours=c("white","blue","green","red"))
 
-# somethings not working- all Nans
+#make neighbour joining tree
+BirdTree<-njs(BDM)
+ggtree(BirdTree, layout = 'rectangular') + geom_tiplab() #branch.length='none'
+
+#make species name legible
+length(unique(PDat$Var1)) #100
+length(unique(BirdTree$tip.label)) #102
+
+#need to delete row 82 (Francolinus pondicerianus) and 91 (Sayornis phoebe) from BirdTree (or add lines in PDat$Var1!), so that the names line up!
+spname <- unique(PDat$Var1)
+spname <-  as.data.frame(spname)
+spname[nrow(spname)+2,] <- NA
+spname$spname[93:102] <- spname$spname[91:100] 
+spname$spname[91:92] <- NA
+spname$spname[83:91] <- spname$spname[82:90]
+spname$spname[82] <- NA
+#spname <- spname %>% filter(!is.na(spname))
+spname$spname <- as.character(spname$spname)
+spname$spname[82] <- c("Francolinus pondicerianus b")
+spname$spname[92] <- c("Sayornis phoebe b")
+
+#create a dataframe that matches labels
+d1 <- unique(BirdTree$tip.label)
+d2 <- unique(spname$spname)
+d <- as.data.frame(cbind(label=d1, nlabel=d2))
+
+BirdTree<-njs(BDM)
+
+BirdTree$tip.label <- d[[2]][match(BirdTree$tip.label, d[[1]])]
+BirdTree$tip.label <- as.character(BirdTree$tip.label)
+BirdTree$tip.label <- sapply(BirdTree$tip.label, function(x) parse(text=x))
+
+library(phylotools-package)
+ggtree(BirdTree, layout = 'rectangular') + geom_tiplab()
 ```
 
 ## Including Plots
