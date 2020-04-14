@@ -102,7 +102,9 @@ BirdTree$tip.label <- as.character(BirdTree$tip.label)
 BirdTree$tip.label <- sapply(BirdTree$tip.label, function(x) parse(text=x))
 
 library(phylotools-package)
-ggtree(BirdTree, layout = 'rectangular') + geom_tiplab()
+tree<-ggtree(BirdTree, layout = 'rectangular') + geom_tiplab()
+write.tree(BirdTree, "Tree.tre")
+ggsave("Tree.png", tree, ,width = 27,height =15,units = "in")
 ```
 
 ## Including Plots
